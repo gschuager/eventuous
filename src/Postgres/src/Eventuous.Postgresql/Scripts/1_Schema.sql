@@ -13,7 +13,7 @@ create table if not exists __schema__.messages (
     message_type    varchar not null,
     stream_id       integer not null,
     stream_position integer not null,
-    global_position bigint primary key generated always as identity, 
+    global_position bigint primary key not null, 
     json_data       jsonb not null,
     json_metadata   jsonb,
     created         timestamp not null,

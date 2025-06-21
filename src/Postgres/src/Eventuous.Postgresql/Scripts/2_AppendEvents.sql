@@ -11,21 +11,26 @@ declare
     _current_version integer;
     _stream_id integer;
     _position bigint;
+    _max_global_position bigint;
 begin
     if _created is null then
         _created = now() at time zone 'utc';
     end if;
+
     select s.stream_id, s.new_version 
         into _stream_id, _current_version 
         from __schema__.check_stream(_stream_name, _expected_version) s;
+
+    select coalesce(max(m.global_position), 0) into _max_global_position
+        from __schema__.messages m;
     
     insert into __schema__.messages (message_id, message_type, stream_id, stream_position, 
-                                     json_data, json_metadata, created) 
+                                     global_position, json_data, json_metadata, created) 
     select m.message_id, m.message_type, _stream_id, 
            _current_version + (row_number() over ()) :: int,
+           _max_global_position + (row_number() over ()) :: bigint,
            m.json_data, m.json_metadata, _created
-    from unnest(_messages) m
-    on conflict do nothing;
+    from unnest(_messages) m;
     
     select m.stream_position, m.global_position into _current_version, _position
         from __schema__.messages m
